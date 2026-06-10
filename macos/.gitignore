@@ -1,0 +1,11 @@
+# Flutter-related
+**/Flutter/ephemeral/
+**/Flutter/GeneratedPluginRegistrant.swift
+**/Pods/
+
+# Xcode-related
+**/dgph
+**/xcuserdata/
+
+# Sensitive Firebase config — injected at CI time
+Runner/GoogleService-Info.plist
