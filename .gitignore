@@ -45,3 +45,7 @@ app.*.map.json
 # Sensitive files — injected at CI time via GitHub Secrets
 /android/app/google-services.json
 /android/key.properties
+
+linux 
+web
+windows
