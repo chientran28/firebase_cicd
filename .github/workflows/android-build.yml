@@ -61,11 +61,22 @@ jobs:
           storeFile=upload-keystore.jks
           EOF
 
-      # ── 6. Install dependencies ────────────────────────────────────────────
+      # ── 6. Inject .env files ───────────────────────────────────────────────
+      - name: Inject .env files
+        run: |
+          if [[ "${{ steps.env.outputs.FLAVOR }}" == "production" ]]; then
+            echo "${{ secrets.ENV_PRODUCTION }}" | base64 --decode > .env.production
+            echo "${{ secrets.ENV_DEVELOPMENT }}" | base64 --decode > .env.development
+          else
+            echo "${{ secrets.ENV_DEVELOPMENT }}" | base64 --decode > .env.development
+            echo "${{ secrets.ENV_PRODUCTION }}" | base64 --decode > .env.production
+          fi
+
+      # ── 8. Install dependencies ────────────────────────────────────────────
       - name: Flutter pub get
         run: flutter pub get
 
-      # ── 7. Build ───────────────────────────────────────────────────────────
+      # ── 9. Build ───────────────────────────────────────────────────────────
       - name: Build APK (development)
         if: startsWith(github.ref_name, 'development-')
         run: |
@@ -86,7 +97,7 @@ jobs:
             --build-name=${{ steps.env.outputs.VERSION }} \
             --build-number=${{ steps.env.outputs.BUILD }}
 
-      # ── 8. Upload to Firebase App Distribution ─────────────────────────────
+      # ── 10. Upload to Firebase App Distribution ────────────────────────────
       - name: Upload to Firebase App Distribution
         uses: wzieba/Firebase-Distribution-Github-Action@v1
         with:
