@@ -80,6 +80,7 @@ jobs:
       # ── 8. Badge launcher icons (dev=red, staging=orange, production=skip) ─
       - name: Generate flavor badge icons
         run: |
+          sudo apt-get install -y imagemagick
           FLAVOR="${{ steps.env.outputs.FLAVOR }}"
           if [[ "$FLAVOR" == "production" ]]; then exit 0; fi
 
