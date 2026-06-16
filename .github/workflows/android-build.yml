@@ -49,7 +49,9 @@ jobs:
       # ── 5. Inject sensitive files from Secrets ─────────────────────────────
       - name: Inject google-services.json
         run: |
-          echo "${{ secrets.GOOGLE_SERVICES_JSON }}" | base64 --decode > android/app/google-services.json
+          echo "${{ secrets.GOOGLE_SERVICES_JSON_DEV }}"  | base64 --decode > android/app/src/development/google-services.json
+          echo "${{ secrets.GOOGLE_SERVICES_JSON_STAG }}" | base64 --decode > android/app/src/staging/google-services.json
+          echo "${{ secrets.GOOGLE_SERVICES_JSON_PROD }}" | base64 --decode > android/app/src/production/google-services.json
 
       - name: Decode keystore
         run: |
@@ -75,13 +77,40 @@ jobs:
       - name: Flutter pub get
         run: flutter pub get
 
-      # ── 8. Build ───────────────────────────────────────────────────────────
+      # ── 8. Badge launcher icons (dev=red, staging=orange, production=skip) ─
+      - name: Generate flavor badge icons
+        run: |
+          FLAVOR="${{ steps.env.outputs.FLAVOR }}"
+          if [[ "$FLAVOR" == "production" ]]; then exit 0; fi
+
+          LABEL="DEV"
+          COLOR="#CC0000"
+          if [[ "$FLAVOR" == "staging" ]]; then
+            LABEL="STG"
+            COLOR="#E65C00"
+          fi
+
+          for DENSITY in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
+            SRC="android/app/src/main/res/mipmap-${DENSITY}/ic_launcher.png"
+            DST="android/app/src/${FLAVOR}/res/mipmap-${DENSITY}/ic_launcher.png"
+            SIZE=$(identify -format "%w" "$SRC")
+            BANNER_H=$((SIZE / 4))
+            FONT_SIZE=$((BANNER_H * 7 / 10))
+            convert "$SRC" \
+              \( -size "${SIZE}x${BANNER_H}" xc:"${COLOR}" \
+                 -fill white -gravity Center \
+                 -font DejaVu-Sans-Bold -pointsize ${FONT_SIZE} \
+                 -annotate 0 "${LABEL}" \) \
+              -gravity South -composite "$DST"
+          done
+
+      # ── 9. Build ───────────────────────────────────────────────────────────
       - name: Build APK debug (development)
         if: startsWith(github.ref_name, 'development-')
         run: |
           flutter build apk \
             --debug \
-            --dart-define=FLAVOR=development \
+            --flavor development \
             --build-name=${{ steps.env.outputs.VERSION }} \
             --build-number=${{ steps.env.outputs.BUILD }}
 
@@ -90,9 +119,9 @@ jobs:
         run: |
           flutter build apk \
             --release \
+            --flavor staging \
             --obfuscate \
             --split-debug-info=build/debug-info \
-            --dart-define=FLAVOR=staging \
             --build-name=${{ steps.env.outputs.VERSION }} \
             --build-number=${{ steps.env.outputs.BUILD }}
 
@@ -101,39 +130,39 @@ jobs:
         run: |
           flutter build appbundle \
             --release \
+            --flavor production \
             --obfuscate \
             --split-debug-info=build/debug-info \
-            --dart-define=FLAVOR=production \
             --build-name=${{ steps.env.outputs.VERSION }} \
             --build-number=${{ steps.env.outputs.BUILD }}
 
-      # ── 9. Upload to Firebase App Distribution ─────────────────────────────
+      # ── 10. Upload to Firebase App Distribution ────────────────────────────
       - name: Upload APK (development)
         if: startsWith(github.ref_name, 'development-')
         uses: wzieba/Firebase-Distribution-Github-Action@v1
         with:
-          appId: ${{ secrets.FIREBASE_APP_ID }}
+          appId: ${{ secrets.FIREBASE_APP_ID_DEV }}
           serviceCredentialsFileContent: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           groups: testers
-          file: build/app/outputs/flutter-apk/app-debug.apk
+          file: build/app/outputs/flutter-apk/app-development-debug.apk
           releaseNotes: "Tag: ${{ github.ref_name }}"
 
       - name: Upload APK (staging)
         if: startsWith(github.ref_name, 'staging-')
         uses: wzieba/Firebase-Distribution-Github-Action@v1
         with:
-          appId: ${{ secrets.FIREBASE_APP_ID }}
+          appId: ${{ secrets.FIREBASE_APP_ID_STAG }}
           serviceCredentialsFileContent: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           groups: testers
-          file: build/app/outputs/flutter-apk/app-release.apk
+          file: build/app/outputs/flutter-apk/app-staging-release.apk
           releaseNotes: "Tag: ${{ github.ref_name }}"
 
       - name: Upload AAB (production)
         if: startsWith(github.ref_name, 'production-')
         uses: wzieba/Firebase-Distribution-Github-Action@v1
         with:
-          appId: ${{ secrets.FIREBASE_APP_ID }}
+          appId: ${{ secrets.FIREBASE_APP_ID_PROD }}
           serviceCredentialsFileContent: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           groups: testers
-          file: build/app/outputs/bundle/release/app-release.aab
+          file: build/app/outputs/bundle/productionRelease/app-production-release.aab
           releaseNotes: "Tag: ${{ github.ref_name }}"

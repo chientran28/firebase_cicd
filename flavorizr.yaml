@@ -1,0 +1,24 @@
+flavors:
+  development:
+    app:
+      name: "Test Project Dev"
+    android:
+      applicationId: "com.example.firebase_cicd.dev"
+    ios:
+      bundleId: "com.example.testProject.dev"
+
+  staging:
+    app:
+      name: "Test Project Staging"
+    android:
+      applicationId: "com.example.firebase_cicd.staging"
+    ios:
+      bundleId: "com.example.testProject.staging"
+
+  production:
+    app:
+      name: "Test Project"
+    android:
+      applicationId: "com.example.firebase_cicd"
+    ios:
+      bundleId: "com.example.testProject"

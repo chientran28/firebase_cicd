@@ -52,3 +52,16 @@ web
 test
 .vscode
 .claude
+# Scripts
+*.sh
+
+# Ignore flavor-specific google-services.json (injected via CI secrets)
+android/app/src/development/google-services.json
+android/app/src/staging/google-services.json
+android/app/src/production/google-services.json
+android/app/google-services.json
+
+# Ignore .env files (injected via CI secrets)
+.env.development
+.env.staging
+.env.production
